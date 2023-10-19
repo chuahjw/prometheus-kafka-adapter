@@ -78,9 +78,17 @@ func main() {
 		authorized := r.Group("/", gin.BasicAuth(gin.Accounts{
 			basicauthUsername: basicauthPassword,
 		}))
-		authorized.POST("/receive", receiveHandler(producer, serializer))
+		if passthroughMode {
+			authorized.POST("/receive", passthroughHandler(producer))
+		} else {
+			authorized.POST("/receive", receiveHandler(producer, serializer))
+		}
 	} else {
-		r.POST("/receive", receiveHandler(producer, serializer))
+		if passthroughMode {
+			r.POST("/receive", passthroughHandler(producer))
+		} else {
+			r.POST("/receive", receiveHandler(producer, serializer))
+		}
 	}
 
 	logrus.Fatal(r.Run())

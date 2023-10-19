@@ -87,3 +87,30 @@ func receiveHandler(producer *kafka.Producer, serializer Serializer) func(c *gin
 
 	}
 }
+
+func passthroughHandler(producer *kafka.Producer) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		rawMessage, err := ioutil.ReadAll(c.Request.Body)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			logrus.WithError(err).Error("couldn't read body")
+			return
+		}
+
+		t := kafkaTopic
+		part := kafka.TopicPartition{
+			Partition: kafka.PartitionAny,
+			Topic:     &t,
+		}
+
+		err = producer.Produce(&kafka.Message{
+			TopicPartition: part,
+			Value:          rawMessage,
+		}, nil)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			logrus.WithError(err).Error(fmt.Sprintf("couldn't produce message in kafka topic %v", topic))
+			return
+		}
+	}
+}
